@@ -10,15 +10,14 @@ from pydantic import (
     SecretStr,
     BaseSettings,
     FilePath,
-    Field,
     validator,
     root_validator,
 )
 
 
 __all__ = [
-    "AppConfig",
-    "Credential",
+    "ConfigModel",
+    "Credentials",
     "GitSpec",
 ]
 
@@ -71,23 +70,32 @@ class EnvSecretStr(EnvExpand, SecretStr):
         return SecretStr.validate(EnvExpand.validate(v))
 
 
-class Credential(NoExtraBaseModel):
-    username: EnvExpand
-    password: EnvSecretStr
+class Credentials(NoExtraBaseModel):
+    username: Optional[EnvExpand]
+    password: Optional[EnvSecretStr]
+    token: Optional[EnvSecretStr]
 
-
-class DefaultCredential(Credential, BaseSettings):
-    username: EnvExpand = Field(..., env="IPFNETCFGBU_DEFAULT_USERNAME")
-    password: EnvSecretStr = Field(..., env="IPFNETCFGBU_DEFAULT_PASSWORD")
+    @root_validator()
+    def ensure_credentials(cls, values):
+        if not any(
+            (all((values.get("username"), values.get("password"))), values["token"])
+        ):
+            raise ValueError("Missing required credentials")
+        return values
 
 
 class Defaults(NoExtraBaseModel, BaseSettings):
-    configs_dir: Optional[EnvExpand] = Field(..., env=("IPFNETCFGBU_CONFIGSDIR", "PWD"))
-    credentials: DefaultCredential
+    configs_dir: EnvExpand
 
     @validator("configs_dir")
     def _configs_dir(cls, value):  # noqa
         return Path(value).absolute()
+
+
+class IPFabricModel(NoExtraBaseModel):
+    server_url: EnvExpand
+    credentials: Credentials
+    filters: Optional[str]
 
 
 class FilePathEnvExpand(FilePath):
@@ -137,8 +145,8 @@ class GitSpec(NoExtraBaseModel):
         return values
 
 
-class AppConfig(NoExtraBaseModel):
+class ConfigModel(NoExtraBaseModel):
     defaults: Defaults
-    credentials: Optional[List[Credential]]
-    logging: Optional[Dict]
+    ipfabric: IPFabricModel
     git: Optional[List[GitSpec]]
+    logging: Optional[Dict]

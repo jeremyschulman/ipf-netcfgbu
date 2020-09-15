@@ -5,6 +5,7 @@ import click
 from first import first
 
 from ipfnetcfgbu import config
+from ipfnetcfgbu import consts
 
 VERSION = metadata.version("ipf-netcfgbu")
 
@@ -19,7 +20,7 @@ VERSION = metadata.version("ipf-netcfgbu")
 class WithConfigCommand(click.Command):
     def invoke(self, ctx):
         try:
-            ctx.obj["app_cfg"] = config.load(fileio=ctx.params["config"])
+            ctx.obj["config"] = config.load(fileio=ctx.params["config"])
             super().invoke(ctx)
 
         except Exception as exc:
@@ -44,16 +45,18 @@ def get_spec_nameorfirst(spec_list, spec_name=None):
 
 
 def check_for_default(ctx, opt, value):
-    if value or Path("ipfnetcfgbu.toml").exists():
+    if value:
         return value
 
-    return None
+    if (fileobj := Path(consts.DEFAULT_CONFIG_FILE)).exists():
+        return fileobj.open()
+
+    ctx.fail("Missing configuration file")
 
 
 opt_config_file = click.option(
     "-C",
     "--config",
-    envvar="IPFNETCFGBU_CONFIG",
     type=click.File(),
     callback=check_for_default,
 )

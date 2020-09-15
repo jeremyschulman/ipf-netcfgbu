@@ -1,82 +1,71 @@
 import asyncio
 
 import click
-
-from netcfgbu.os_specs import make_host_connector
-from netcfgbu.logger import get_logger, stop_aiologging
-from netcfgbu.aiofut import as_completed
-from netcfgbu import jumphosts
-
-from .root import (
-    cli,
-    WithInventoryCommand,
-    opt_config_file,
-    opts_inventory,
-    opt_batch,
-    opt_debug_ssh,
-)
+import maya
 
 
-from .report import Report
+from aioipfabric.filters import parse_filter
+
+from ipfnetcfgbu.config_model import ConfigModel
+from ipfnetcfgbu.ipf import IPFabricClient
+from ipfnetcfgbu import logging
+from .root import cli, opt_config_file, WithConfigCommand
 
 
-def exec_backup(app_cfg, inventory_recs):
-    backup_tasks = dict()
+def exec_backup(config: ConfigModel):
+    ipf_cfg = config.ipfabric
 
-    log = get_logger()
+    log = logging.get_logger()
 
-    backup_tasks = {
-        make_host_connector(rec, app_cfg).backup_config(): rec for rec in inventory_recs
-    }
+    log.info("Fetching inventory from IP Fabric")
+    if ipf_cfg.filters:
+        log.info(f"Using filter: {ipf_cfg.filters}")
+        ipf_filters = parse_filter(ipf_cfg.filters)
+    else:
+        log.warning("No device filtering specified")
+        ipf_filters = None
 
-    total = len(backup_tasks)
-    report = Report()
-    done = 0
-
-    async def process_batch():
-        nonlocal done
-
-        if app_cfg.jumphost:
-            await jumphosts.connect_jumphosts()
-
-        async for task in as_completed(backup_tasks):
-            done += 1
-            coro = task.get_coro()
-            rec = backup_tasks[coro]
-            msg = f"DONE ({done}/{total}): {rec['host']} "
-
-            try:
-                res = task.result()
-                ok = res is True
-                report.task_results[ok].append((rec, res))
-
-            except (asyncio.TimeoutError, OSError) as exc:
-                ok = False
-                report.task_results[False].append((rec, exc))
-
-            except Exception as exc:
-                ok = False
-                log.error(msg + f"FAILURE: {str(exc)}")
-                report.task_results[False].append((rec, exc))
-
-            log.info(msg + ("PASS" if ok else "FALSE"))
+    ipf = IPFabricClient()
 
     loop = asyncio.get_event_loop()
-    report.start_timing()
-    loop.run_until_complete(process_batch())
-    report.stop_timing()
-    stop_aiologging()
-    report.print_report()
+    loop.run_until_complete(ipf.login())
+
+    # obtain the device inventory that is matching the User provided filters.
+    # This list of hostnames is used to filter the configuration files that are
+    # requested.
+
+    devices = loop.run_until_complete(
+        ipf.fetch_devices(columns=["hostname"], filters=ipf_filters)
+    )
+
+    hostnames = {rec["hostname"] for rec in devices}
+
+    def device_filter(hashrec):
+        return hashrec["hostname"] in hostnames
+
+    async def save_config(rec, config_text):
+        hostname = rec["hostname"]
+        print(f"GOT CONFIG: {hostname}")
+
+    start_of_today = maya.now().snap("@d")
+    since_ts = int(start_of_today.epoch * 1_000)
+
+    print(f"Backup configs that have changed since: {start_of_today}")
+
+    loop.run_until_complete(
+        ipf.fetch_device_configs(
+            since_ts=since_ts, on_config=save_config, device_filter=device_filter
+        )
+    )
+
+    logging.stop()
 
 
-@cli.command(name="backup", cls=WithInventoryCommand)
+@cli.command(name="backup", cls=WithConfigCommand)
 @opt_config_file
-@opts_inventory
-@opt_debug_ssh
-@opt_batch
 @click.pass_context
 def cli_backup(ctx, **_cli_opts):
     """
     Backup network configurations.
     """
-    exec_backup(app_cfg=ctx.obj["app_cfg"], inventory_recs=ctx.obj["inventory_recs"])
+    exec_backup(ctx.obj["config"])

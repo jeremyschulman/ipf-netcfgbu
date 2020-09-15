@@ -14,8 +14,8 @@ import toml
 # Private Imports
 # -----------------------------------------------------------------------------
 
-from .log import setup_logging
-from .config_model import AppConfig
+from ipfnetcfgbu import logging
+from .config_model import ConfigModel
 from pydantic import ValidationError
 
 __all__ = ["load"]
@@ -32,7 +32,7 @@ def validation_errors(filepath, errors):
     return "\n".join(as_human)
 
 
-def load(*, filepath=None, fileio=None) -> AppConfig:
+def load(*, filepath=None, fileio=None) -> ConfigModel:
     app_cfg = dict()
 
     if filepath:
@@ -42,14 +42,15 @@ def load(*, filepath=None, fileio=None) -> AppConfig:
     if fileio:
         app_cfg = toml.load(fileio)
 
-    setup_logging(app_cfg)
+    logging.start(app_cfg)
 
     app_defaults = app_cfg.get("defaults")
     if not app_defaults:
         app_cfg["defaults"] = dict(credentials={})
 
     try:
-        cfg_obj = AppConfig.parse_obj(app_cfg)
+        cfg_obj = ConfigModel.parse_obj(app_cfg)
+
     except ValidationError as exc:
         filepath = fileio.name if fileio else ""
         raise RuntimeError(validation_errors(filepath=filepath, errors=exc.errors()))

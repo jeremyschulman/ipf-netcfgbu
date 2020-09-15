@@ -2,7 +2,6 @@ import click
 
 from ipfnetcfgbu import config as _config
 from ipfnetcfgbu.vcs import git
-from ipfnetcfgbu.log import stop_aiologging
 
 from .root import cli, opt_config_file, get_spec_nameorfirst
 
@@ -20,7 +19,6 @@ def cli_vcs():
 class VCSCommand(click.Command):
     def invoke(self, ctx):
         cfg_fileopt = ctx.params["config"]
-
         try:
             app_cfgs = ctx.obj["app_cfg"] = _config.load(fileio=cfg_fileopt)
             if not (spec := get_spec_nameorfirst(app_cfgs.git, ctx.params["name"])):
@@ -33,7 +31,6 @@ class VCSCommand(click.Command):
 
             ctx.obj["vcs_spec"] = spec
             super().invoke(ctx)
-            stop_aiologging()
 
         except Exception as exc:
             ctx.fail(exc.args[0])

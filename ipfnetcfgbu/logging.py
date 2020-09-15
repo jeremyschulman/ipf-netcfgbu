@@ -18,7 +18,7 @@ import logging
 import logging.handlers
 
 
-__all__ = ["setup_logging", "get_logger", "stop_aiologging"]
+__all__ = ["start", "stop", "get_logger"]
 
 
 _g_quelgr_listener: logging.handlers.QueueListener
@@ -63,7 +63,7 @@ def setup_logging_queue(logger_names) -> None:
     _g_quelgr_listener.start()
 
 
-def setup_logging(app_cfg):
+def start(app_cfg):
     log_cfg = app_cfg.get("logging") or {}
     log_cfg["version"] = 1
 
@@ -71,7 +71,7 @@ def setup_logging(app_cfg):
     setup_logging_queue(log_cfg.get("loggers") or [])
 
 
-def stop_aiologging():
+def stop():
     _g_quelgr_listener.stop()
     sys.stdout.flush()
 
