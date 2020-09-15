@@ -12,7 +12,7 @@ from ipfnetcfgbu import logging
 from .root import cli, opt_config_file, WithConfigCommand
 
 
-def exec_backup(config: ConfigModel):
+def exec_backup(config: ConfigModel, opts):
     ipf_cfg = config.ipfabric
 
     log = logging.get_logger()
@@ -40,6 +40,8 @@ def exec_backup(config: ConfigModel):
 
     hostnames = {rec["hostname"] for rec in devices}
 
+    log.info(f"Inventory contains {len(hostnames)} devices")
+
     def device_filter(hashrec):
         return hashrec["hostname"] in hostnames
 
@@ -50,11 +52,15 @@ def exec_backup(config: ConfigModel):
     start_of_today = maya.now().snap("@d")
     since_ts = int(start_of_today.epoch * 1_000)
 
-    print(f"Backup configs that have changed since: {start_of_today}")
+    if opts['all'] is True:
+        print(f"Backup all configs since: {start_of_today}")
+    else:
+        print(f"Backup configs that have changed since: {start_of_today}")
 
     loop.run_until_complete(
         ipf.fetch_device_configs(
-            since_ts=since_ts, on_config=save_config, device_filter=device_filter
+            since_ts=since_ts, on_config=save_config, device_filter=device_filter,
+            all_configs=opts['all']
         )
     )
 
@@ -63,9 +69,13 @@ def exec_backup(config: ConfigModel):
 
 @cli.command(name="backup", cls=WithConfigCommand)
 @opt_config_file
+@click.option(
+    '--all', help='Backup all configs, not just those that changed',
+    is_flag=True
+)
 @click.pass_context
-def cli_backup(ctx, **_cli_opts):
+def cli_backup(ctx, **opts):
     """
     Backup network configurations.
     """
-    exec_backup(ctx.obj["config"])
+    exec_backup(ctx.obj["config"], opts)
