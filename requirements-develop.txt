@@ -1,3 +1,4 @@
+wheel
 invoke
 black
 flake8

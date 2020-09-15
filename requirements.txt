@@ -1,1 +1,5 @@
+pydantic
+pyexpect
+click
+first
 aio-ipfabric

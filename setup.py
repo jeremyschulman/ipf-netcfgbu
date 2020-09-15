@@ -57,6 +57,9 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=requirements(),
+    entry_points={
+        "console_scripts": ["ipf-netcfgbu = ipfnetcfgbu.cli.main:run"],
+    },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
