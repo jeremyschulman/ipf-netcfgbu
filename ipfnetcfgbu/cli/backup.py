@@ -49,7 +49,7 @@ def exec_backup(config: ConfigModel, opts):
         hostname = rec["hostname"]
         print(f"GOT CONFIG: {hostname}")
 
-    start_of_today = maya.now().snap("@d")
+    start_of_today = maya.when(opts['since']).snap("@d")
     since_ts = int(start_of_today.epoch * 1_000)
 
     if opts['all'] is True:
@@ -69,6 +69,10 @@ def exec_backup(config: ConfigModel, opts):
 
 @cli.command(name="backup", cls=WithConfigCommand)
 @opt_config_file
+@click.option(
+    '--since', help='Filter devices based on time, defaults to "today"',
+    default='today'
+)
 @click.option(
     '--all', help='Backup all configs, not just those that changed',
     is_flag=True
