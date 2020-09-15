@@ -5,3 +5,4 @@ click
 first
 aio-ipfabric
 maya
+aiofiles

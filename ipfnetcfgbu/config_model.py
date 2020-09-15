@@ -10,6 +10,7 @@ from pydantic import (
     SecretStr,
     BaseSettings,
     FilePath,
+    DirectoryPath,
     validator,
     root_validator,
 )
@@ -84,8 +85,26 @@ class Credentials(NoExtraBaseModel):
         return values
 
 
+class FilePathEnvExpand(FilePath):
+    """ A FilePath field whose value can interpolated from env vars """
+
+    @classmethod
+    def __get_validators__(cls):
+        yield from EnvExpand.__get_validators__()
+        yield from FilePath.__get_validators__()
+
+
+class DirPathEnvExpand(DirectoryPath):
+    """ A DirectoryPath field whose value can interpolated from env vars """
+
+    @classmethod
+    def __get_validators__(cls):
+        yield from EnvExpand.__get_validators__()
+        yield from DirectoryPath.__get_validators__()
+
+
 class Defaults(NoExtraBaseModel, BaseSettings):
-    configs_dir: EnvExpand
+    configs_dir: DirPathEnvExpand
 
     @validator("configs_dir")
     def _configs_dir(cls, value):  # noqa
@@ -96,15 +115,7 @@ class IPFabricModel(NoExtraBaseModel):
     server_url: EnvExpand
     credentials: Credentials
     filters: Optional[str]
-
-
-class FilePathEnvExpand(FilePath):
-    """ A FilePath field whose value can interpolated from env vars """
-
-    @classmethod
-    def __get_validators__(cls):
-        yield from EnvExpand.__get_validators__()
-        yield from FilePath.__get_validators__()
+    strip_hostname_domains: Optional[List[str]]
 
 
 class GitSpec(NoExtraBaseModel):

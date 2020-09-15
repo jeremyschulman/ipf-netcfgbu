@@ -59,7 +59,7 @@ opt_config_file = click.option(
     "--config",
     type=click.File(),
     callback=check_for_default,
-    envvar=consts.ENV_CONFIG_FILE
+    envvar=consts.ENV_CONFIG_FILE,
 )
 
 # -----------------------------------------------------------------------------

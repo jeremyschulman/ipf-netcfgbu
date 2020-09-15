@@ -9,10 +9,21 @@
 # -----------------------------------------------------------------------------
 
 [defaults]
-    configs_dir = "$CONFIGS_DIR"
-    ipfabric = "https://ipfabric.mycompany.com"
-    credentials.username = "$NETWORK_USERNAME"
-    credentials.password = "$NETWORK_PASSWORD"
+    configs_dir = "$PRJ_DIR/configs"
+
+[ipfabric]
+    server_url = "https://ipfabric.mycorp.com"
+    credentials.username = "$IPF_USERNAME"
+    credentials.password = "$IPF_PASSWORD"
+    filters = "family != lap"
+
+    # optional list of domain names you want to remove from the
+    # IP Fabric device hostname value.
+
+    strip_hostname_domains = [
+        '.mycorp.org',
+        '.mycorp.com'
+    ]
 
 # -----------------------------------------------------------------------------
 #
@@ -27,22 +38,8 @@
 [[git]]
     # the first entry does not require a name and it will be treated
     # as a default; i.e. when the --name option is omitted.
-    repo = "https://github.mycorp.com/jschulman/test-network-configs.git"
-    token = "$GIT_TOKEN"
-
-[[git]]
-    # example of using a deployment key that does not use a passphrase
-    name = "demo-ssh"
-    repo = "git@gitlab.com:jschulman/test-network-configs.git"
-    deploy_key = "$HOME/test-config-backups"
-
-[[git]]
-    # example of using a deployment key that uses a passphrase
-    name = "demo-ssh-pw"
-    repo = "git@github.mlbam.net:jschulman/test-network-configs.git"
-    deploy_key = "$HOME/pwtest-backups"
-    deploy_passphrase = "$GITKEY_PASSWORD"
-
+    repo = "git@github.mycorp.com:jschulman/test-ipf-netcfgbu.git"
+    deploy_key = "$GIT_DEPLOY_KEY"
 
 # -----------------------------------------------------------------------------
 #
@@ -52,7 +49,7 @@
 #   https://docs.python.org/3/library/logging.config.html
 # -----------------------------------------------------------------------------
 
-[logging.loggers.netcfgbu]
+[logging.loggers.ipfnetcfgbu]
     handlers = ["console", "file"]
     level = "INFO"
 
