@@ -38,6 +38,10 @@ def exec_backup(config: ConfigModel, opts):
         ipf.fetch_devices(columns=["hostname"], filters=ipf_filters)
     )
 
+    if not len(devices):
+        log.warning("No devices matching filter")
+        return
+
     hostnames = {rec["hostname"] for rec in devices}
 
     log.info(f"Inventory contains {len(hostnames)} devices")
@@ -49,32 +53,65 @@ def exec_backup(config: ConfigModel, opts):
         hostname = rec["hostname"]
         print(f"GOT CONFIG: {hostname}")
 
-    start_of_today = maya.when(opts['since']).snap("@d")
-    since_ts = int(start_of_today.epoch * 1_000)
+    date_start = opts['date_start']
+
+    if (date_end := opts['date_end']) is None:
+        date_end = date_start.snap('1d')
+
+    since_ts = int(date_start.epoch * 1_000)
+    before_ts = int(date_end.epoch * 1_000)
+
+    timespan_str = f"{date_start}, {date_end}"
 
     if opts['all'] is True:
-        print(f"Backup all configs since: {start_of_today}")
+        log.info(f"Backup all configs: {timespan_str}")
     else:
-        print(f"Backup configs that have changed since: {start_of_today}")
+        log.info(f"Backup configs that have changed: {timespan_str}")
 
-    loop.run_until_complete(
+    res = loop.run_until_complete(
         ipf.fetch_device_configs(
-            since_ts=since_ts, on_config=save_config, device_filter=device_filter,
-            all_configs=opts['all']
+            since_ts=since_ts, before_ts=before_ts,
+            on_config=save_config, device_filter=device_filter,
+            all_configs=opts['all'],
+            dry_run=opts['dry_run']
         )
     )
 
+    log.info(f"Total devices: {len(res)}")
     logging.stop()
+
+
+def as_maya(ctx, param, value):
+    if not value:
+        return None
+
+    try:
+        dt = maya.when(value)
+        return dt.snap('@d') if value == 'today' else dt
+
+    except ValueError as exc:
+        ctx.fail(f"{exc.args[0][:-1]}: {value}")
 
 
 @cli.command(name="backup", cls=WithConfigCommand)
 @opt_config_file
 @click.option(
-    '--since', help='Filter devices based on time, defaults to "today"',
+    '--date-start', help='Identifies the starting timestamp date/time',
+    metavar='<DATE-TIME>',
+    callback=as_maya,
     default='today'
 )
 @click.option(
+    '--date-end', help='Identifies the ending timestamp date/time',
+    metavar='<DATE-TIME>',
+    callback=as_maya
+)
+@click.option(
     '--all', help='Backup all configs, not just those that changed',
+    is_flag=True
+)
+@click.option(
+    '--dry-run', help='Use to see device list that would be backed up',
     is_flag=True
 )
 @click.pass_context
