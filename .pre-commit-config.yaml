@@ -18,4 +18,4 @@ repos:
     rev: stable
     hooks:
     -   id: black
-        args: ["."]
+        args: ["-c", "pyproject.toml", "."]

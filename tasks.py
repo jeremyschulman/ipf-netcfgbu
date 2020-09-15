@@ -31,7 +31,7 @@ from invoke import task
 def precheck(ctx):
     ctx.run("black .")
     ctx.run("flake8 .")
-    ctx.run("pre-commit run -a")
+    ctx.run("pre-commit run -a", pty=True)
     ctx.run("interrogate -c pyproject.toml", pty=True)
 
 

@@ -1,0 +1,67 @@
+# -----------------------------------------------------------------------------
+#
+#                          Network Configuration Backup
+#                              Configuration File
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+#                              Default Settings
+# -----------------------------------------------------------------------------
+
+[defaults]
+    configs_dir = "$PRJ_DIR/configs"
+
+[ipfabric]
+    server_url = "https://ipfabric.mycorp.com"
+    credentials.username = "$IPF_USERNAME"
+    credentials.password = "$IPF_PASSWORD"
+    filters = "family != lap"
+
+    # optional list of domain names you want to remove from the
+    # IP Fabric device hostname value.
+
+    strip_hostname_domains = [
+        '.mycorp.org',
+        '.mycorp.com'
+    ]
+
+# -----------------------------------------------------------------------------
+#
+#                          Version Control System(s)
+#
+# Currently only git systems are supported, but others types may be supported in
+# the future.  If you have more than one vcs repository you can include the
+# `name` field so that you can identify the vcs-repo using the CLI --name
+# option.
+# -----------------------------------------------------------------------------
+
+[[git]]
+    # the first entry does not require a name and it will be treated
+    # as a default; i.e. when the --name option is omitted.
+    repo = "git@github.mycorp.com:jschulman/test-ipf-netcfgbu.git"
+    deploy_key = "$GIT_DEPLOY_KEY"
+
+# -----------------------------------------------------------------------------
+#
+#                                Logging
+#
+# Logging - follows Python format as described
+#   https://docs.python.org/3/library/logging.config.html
+# -----------------------------------------------------------------------------
+
+[logging.loggers.ipfnetcfgbu]
+    handlers = ["console", "file"]
+    level = "INFO"
+
+[logging.handlers.console]
+    class = "logging.StreamHandler"
+    formatter = "basic"
+    stream = "ext://sys.stdout"
+
+[logging.handlers.file]
+    class = "logging.FileHandler"
+    formatter = "basic"
+    filename =  "ipfnetcfgbu.log"
+
+[logging.formatters.basic]
+    format = "%(asctime)s %(levelname)s: %(message)s"
