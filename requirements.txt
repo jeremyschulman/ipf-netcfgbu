@@ -1,6 +1,6 @@
 toml
 pydantic
-pyexpect
+pexpect
 click
 first
 aio-ipfabric@git+https://github.com/jeremyschulman/aio-ipfabric.git
