@@ -54,7 +54,7 @@ def exec_backup(config: ConfigModel, filters, start_date, end_date, dry_run, for
     def device_filter(hashrec):
         return hashrec["hostname"] in hostnames
 
-    end_date = end_date or start_date.snap('1d')
+    end_date = end_date or start_date.snap("1d")
 
     since_ts = int(start_date.epoch * 1_000)
     before_ts = int(end_date.epoch * 1_000)
@@ -75,7 +75,7 @@ def exec_backup(config: ConfigModel, filters, start_date, end_date, dry_run, for
     config_dir = config.defaults.configs_dir
 
     async def save_config(rec, config_text):
-        hostname = as_hostname(rec["hostname"]).lower().replace('/', '-')
+        hostname = as_hostname(rec["hostname"]).lower().replace("/", "-")
         log.info(f"SAVE CONFIG FOR: {hostname}")
         cfg_f = config_dir.joinpath(hostname + ".cfg")
         async with aiofiles.open(cfg_f, "w+") as ofile:
@@ -96,7 +96,7 @@ def exec_backup(config: ConfigModel, filters, start_date, end_date, dry_run, for
     logging.stop()
 
 
-def as_maya(ctx, param, value):     # noqa
+def as_maya(ctx, param, value):  # noqa
     if not value:
         return None
 
@@ -124,18 +124,18 @@ def as_maya(ctx, param, value):     # noqa
     callback=as_maya,
 )
 @click.option(
-    "--force", help="Force backup of all configs, not just those that changed", is_flag=True,
+    "--force",
+    help="Force backup of all configs, not just those that changed",
+    is_flag=True,
 )
 @click.option(
     "--dry-run", help="Use to see device list that would be backed up", is_flag=True
 )
-@click.option(
-    "--filters", help="Override the `filters` option in the config file"
-)
+@click.option("--filters", help="Override the `filters` option in the config file")
 @click.pass_obj
 def cli_backup(obj, **opts):
     """
     Backup network configurations.
     """
-    opts['config'] = obj['config']
+    opts["config"] = obj["config"]
     exec_backup(**opts)
