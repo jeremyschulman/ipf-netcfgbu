@@ -27,6 +27,13 @@ To save these configurations into your remote git repository:
 ipf-netcfgbu vcs save
 ```
 
+# Installation
+
+This package is not yet in PyPi.  To install:
+
+```sheel
+pip install ipf-netcfgbu@git+https://github.com/jeremyschulman/ipf-netcfgbu.git
+```
 # Usage
 
 ```shell
