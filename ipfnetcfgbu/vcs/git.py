@@ -97,8 +97,8 @@ def vcs_status(spec: GitSpec, repo_dir: Path):
     logr = get_logger()
     logr.info(
         f"""
-VCS diffs git: {spec.repo}
-             dir: {str(repo_dir)}
+VCS REMOTE REPO: {spec.repo}
+      LOCAL DIR: {str(repo_dir)}
 """
     )
 

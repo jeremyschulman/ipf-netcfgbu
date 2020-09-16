@@ -14,15 +14,18 @@ from ipfnetcfgbu import logging
 from .root import cli, opt_config_file, WithConfigCommand
 
 
-def exec_backup(config: ConfigModel, opts):
+def exec_backup(config: ConfigModel, filters, start_date, end_date, dry_run, force):
     ipf_cfg = config.ipfabric
 
     log = logging.get_logger()
 
+    filters = filters or ipf_cfg.filters
+
     log.info("Fetching inventory from IP Fabric")
-    if ipf_cfg.filters:
-        log.info(f"Using filter: {ipf_cfg.filters}")
-        ipf_filters = parse_filter(ipf_cfg.filters)
+
+    if filters:
+        log.info(f"Using filter: {filters}")
+        ipf_filters = parse_filter(filters)
     else:
         log.warning("No device filtering specified")
         ipf_filters = None
@@ -51,17 +54,14 @@ def exec_backup(config: ConfigModel, opts):
     def device_filter(hashrec):
         return hashrec["hostname"] in hostnames
 
-    date_start = opts["date_start"]
+    end_date = end_date or start_date.snap("1d")
 
-    if (date_end := opts["date_end"]) is None:
-        date_end = date_start.snap("1d")
+    since_ts = int(start_date.epoch * 1_000)
+    before_ts = int(end_date.epoch * 1_000)
 
-    since_ts = int(date_start.epoch * 1_000)
-    before_ts = int(date_end.epoch * 1_000)
+    timespan_str = f"START={start_date}, END={end_date}"
 
-    timespan_str = f"{date_start}, {date_end}"
-
-    if opts["all"] is True:
+    if force is True:
         log.info(f"Backup all configs: {timespan_str}")
     else:
         log.info(f"Backup configs that have changed: {timespan_str}")
@@ -75,7 +75,7 @@ def exec_backup(config: ConfigModel, opts):
     config_dir = config.defaults.configs_dir
 
     async def save_config(rec, config_text):
-        hostname = as_hostname(rec["hostname"]).lower()
+        hostname = as_hostname(rec["hostname"]).lower().replace("/", "-")
         log.info(f"SAVE CONFIG FOR: {hostname}")
         cfg_f = config_dir.joinpath(hostname + ".cfg")
         async with aiofiles.open(cfg_f, "w+") as ofile:
@@ -87,8 +87,8 @@ def exec_backup(config: ConfigModel, opts):
             before_ts=before_ts,
             on_config=save_config,
             device_filter=device_filter,
-            all_configs=opts["all"],
-            dry_run=opts["dry_run"],
+            all_configs=force,
+            dry_run=dry_run,
         )
     )
 
@@ -96,7 +96,7 @@ def exec_backup(config: ConfigModel, opts):
     logging.stop()
 
 
-def as_maya(ctx, param, value):
+def as_maya(ctx, param, value):  # noqa
     if not value:
         return None
 
@@ -111,27 +111,31 @@ def as_maya(ctx, param, value):
 @cli.command(name="backup", cls=WithConfigCommand)
 @opt_config_file
 @click.option(
-    "--date-start",
+    "--start-date",
     help="Identifies the starting timestamp date/time",
     metavar="<DATE-TIME>",
     callback=as_maya,
     default="today",
 )
 @click.option(
-    "--date-end",
+    "--end-date",
     help="Identifies the ending timestamp date/time",
     metavar="<DATE-TIME>",
     callback=as_maya,
 )
 @click.option(
-    "--all", help="Backup all configs, not just those that changed", is_flag=True
+    "--force",
+    help="Force backup of all configs, not just those that changed",
+    is_flag=True,
 )
 @click.option(
     "--dry-run", help="Use to see device list that would be backed up", is_flag=True
 )
-@click.pass_context
-def cli_backup(ctx, **opts):
+@click.option("--filters", help="Override the `filters` option in the config file")
+@click.pass_obj
+def cli_backup(obj, **opts):
     """
     Backup network configurations.
     """
-    exec_backup(ctx.obj["config"], opts)
+    opts["config"] = obj["config"]
+    exec_backup(**opts)
