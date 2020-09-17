@@ -14,7 +14,9 @@ from ipfnetcfgbu import logging
 from .root import cli, opt_config_file, WithConfigCommand
 
 
-def exec_backup(config: ConfigModel, filters, start_date, end_date, dry_run, force):
+def exec_backup(
+    config: ConfigModel, snapshot, filters, start_date, end_date, dry_run, force
+):
     ipf_cfg = config.ipfabric
 
     log = logging.get_logger()
@@ -23,17 +25,36 @@ def exec_backup(config: ConfigModel, filters, start_date, end_date, dry_run, for
 
     log.info("Fetching inventory from IP Fabric")
 
+    loop = asyncio.get_event_loop()
+
+    ipf = IPFabricClient()
+    loop.run_until_complete(ipf.login())
+
+    if not snapshot:
+        log.info(f"Using IP Fabric snapshot: {ipf.snapshots[0]['name']}")
+
+    else:
+        # API NOTE: "Untitled" snapshots are stored as name=None
+        q_name = None if snapshot == "Untitled" else snapshot
+
+        log.info(f"Looking for IP Fabric snapshot: {snapshot}")
+
+        if not (
+            sn_rec := next(
+                (rec for rec in ipf.snapshots if rec["name"] == q_name), None
+            )
+        ):
+            log.error(f"IP Fabric snapshot not found: {snapshot}")
+            return
+        ipf.active_snapshot = sn_rec["id"]
+
     if filters:
-        log.info(f"Using filter: {filters}")
+        log.info(f"Filters: {filters}")
         ipf_filters = parse_filter(filters)
+
     else:
         log.warning("No device filtering specified")
         ipf_filters = None
-
-    ipf = IPFabricClient()
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(ipf.login())
 
     # obtain the device inventory that is matching the User provided filters.
     # This list of hostnames is used to filter the configuration files that are
@@ -132,6 +153,10 @@ def as_maya(ctx, param, value):  # noqa
     "--dry-run", help="Use to see device list that would be backed up", is_flag=True
 )
 @click.option("--filters", help="Override the `filters` option in the config file")
+@click.option(
+    "--snapshot",
+    help="IPF snapshot name to use, default is most recent",
+)
 @click.pass_obj
 def cli_backup(obj, **opts):
     """
