@@ -3,6 +3,6 @@ pydantic
 pexpect
 click
 first
-aio-ipfabric@git+https://github.com/jeremyschulman/aio-ipfabric.git
+aio-ipfabric
 maya
 aiofiles
