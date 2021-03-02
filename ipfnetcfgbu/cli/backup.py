@@ -14,7 +14,7 @@ from ipfnetcfgbu import logging
 from .root import cli, opt_config_file, WithConfigCommand
 
 
-def exec_backup(
+async def exec_backup(
     config: ConfigModel, snapshot, filters, start_date, end_date, dry_run, force
 ):
     ipf_cfg = config.ipfabric
@@ -25,10 +25,8 @@ def exec_backup(
 
     log.info("Fetching inventory from IP Fabric")
 
-    loop = asyncio.get_event_loop()
-
     ipf = IPFabricClient()
-    loop.run_until_complete(ipf.login())
+    await ipf.login()
 
     if not snapshot:
         log.info(f"Using IP Fabric snapshot: {ipf.snapshots[0]['name']}")
@@ -60,9 +58,7 @@ def exec_backup(
     # This list of hostnames is used to filter the configuration files that are
     # requested.
 
-    devices = loop.run_until_complete(
-        ipf.fetch_devices(columns=["hostname"], filters=ipf_filters)
-    )
+    devices = await ipf.fetch_devices(columns=["hostname"], filters=ipf_filters)
 
     if not len(devices):
         log.warning("No devices matching filter")
@@ -102,19 +98,18 @@ def exec_backup(
         async with aiofiles.open(cfg_f, "w+") as ofile:
             await ofile.write(config_text)
 
-    res = loop.run_until_complete(
-        ipf.fetch_device_configs(
-            since_ts=since_ts,
-            before_ts=before_ts,
-            on_config=save_config,
-            device_filter=device_filter,
-            all_configs=force,
-            dry_run=dry_run,
-        )
+    res = await ipf.fetch_device_configs(
+        since_ts=since_ts,
+        before_ts=before_ts,
+        on_config=save_config,
+        device_filter=device_filter,
+        all_configs=force,
+        dry_run=dry_run,
     )
 
     log.info(f"Total devices: {len(res)}")
     logging.stop()
+    await ipf.logout()
 
 
 def as_maya(ctx, param, value):  # noqa
@@ -163,4 +158,4 @@ def cli_backup(obj, **opts):
     Backup network configurations.
     """
     opts["config"] = obj["config"]
-    exec_backup(**opts)
+    asyncio.run(exec_backup(**opts))
