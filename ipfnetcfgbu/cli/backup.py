@@ -29,7 +29,7 @@ async def exec_backup(
     await ipf.login()
 
     if not snapshot:
-        log.info(f"Using IP Fabric snapshot: {ipf.snapshots[0]['name']}")
+        log.info(f"Using IP Fabric snapshot: {ipf.snapshots[0]['id']}")
 
     else:
         # API NOTE: "Untitled" snapshots are stored as name=None
