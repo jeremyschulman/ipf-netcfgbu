@@ -1,7 +1,7 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
-default_language_version:
-    python: python3.8
+#default_language_version:
+#    python: python3.8
 
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
@@ -15,7 +15,17 @@ repos:
     -   id: flake8
 
 -   repo: https://github.com/psf/black
-    rev: stable
+    rev: 22.12.0
     hooks:
     -   id: black
         args: ["-c", "pyproject.toml", "."]
+
+
+-   repo: https://github.com/PyCQA/flake8
+    rev: 6.0.0
+    hooks:
+    -   id: flake8
+        exclude: 'examples'
+        args: ['--ignore=E501,E203,W503,E731,W291',
+               '--max-line-length=130',
+               '--per-file-ignores=__init__.py:F401']
